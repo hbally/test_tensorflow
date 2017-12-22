@@ -96,26 +96,28 @@ def run_file2matrix():
     ax.scatter(datingDataMat[:, 0], datingDataMat[:, 1], 15.0 * array(datingLables), 15.0 * array(datingLables))
     plt.show()
 
+
 def autoNorm(dataSet):
     '''归一化特征值，让所有的特征值的取值范围在【0-1】或者【-1,1】
        转化0到1区间值：
        newvalue = (oldValue - min)/(max - min )
     '''
-    minVals = dataSet.min(0)#min(0)从列中选取最小值，[ 0.        0.        0.001156]
+    minVals = dataSet.min(0)  # min(0)从列中选取最小值，[ 0.        0.        0.001156]
     maxVals = dataSet.max(0)
-    ranges = maxVals - minVals #[  9.12730000e+04   2.09193490e+01   1.69436100e+00]
+    ranges = maxVals - minVals  # [  9.12730000e+04   2.09193490e+01   1.69436100e+00]
     normDataSet = zeros(shape(dataSet))
     m = dataSet.shape[0]
-    normDataSet = dataSet - tile(minVals, (m,1))
-    normDataSet = normDataSet/tile(ranges, (m,1))   #element wise divide
+    normDataSet = dataSet - tile(minVals, (m, 1))
+    normDataSet = normDataSet / tile(ranges, (m, 1))  # element wise divide
     return normDataSet, ranges, minVals
+
 
 def run_autoNorm():
     datingDataMat, datingLables = file2matrix('datingTestSet.txt')
     normDataSet, ranges, minVals = autoNorm(datingDataMat)
-    print(" normDataSet %s" % normDataSet )
-    print(" ranges %s" % ranges )
-    print(" minVals %s" % minVals )
+    print(" normDataSet %s" % normDataSet)
+    print(" ranges %s" % ranges)
+    print(" minVals %s" % minVals)
 
 
 def datingClassTest():
@@ -123,39 +125,83 @@ def datingClassTest():
        2.txt源数据的后900个数据作为样本数据
        3.推测结果和实际结果比较，计算出出错率
     '''
-    hoRatio = 0.10      #hold out 10%
-    datingDataMat,datingLabels = file2matrix('datingTestSet2.txt')       #load data setfrom file
-    #对原始数据归一化处理
+    hoRatio = 0.10  # hold out 10%
+    datingDataMat, datingLabels = file2matrix('datingTestSet2.txt')  # load data setfrom file
+    # 对原始数据归一化处理
     normMat, ranges, minVals = autoNorm(datingDataMat)
     m = normMat.shape[0]
-    #计算测试向量的数量确定那些数据用于测试
-    numTestVecs = int(m*hoRatio)
-    errorCount = 0.0#记录推测错误的数量
+    # 计算测试向量的数量确定那些数据用于测试
+    numTestVecs = int(m * hoRatio)
+    errorCount = 0.0  # 记录推测错误的数量
     for i in range(numTestVecs):
-        classifierResult = classify0(normMat[i,:],normMat[numTestVecs:m,:],datingLabels[numTestVecs:m],3)
-        print( "the classifier came back with: %d, the real answer is: %d" % (classifierResult, datingLabels[i]))
+        classifierResult = classify0(normMat[i, :], normMat[numTestVecs:m, :], datingLabels[numTestVecs:m], 3)
+        print("the classifier came back with: %d, the real answer is: %d" % (classifierResult, datingLabels[i]))
         if (classifierResult != datingLabels[i]): errorCount += 1.0
-    print("the total error rate is: %f" % (errorCount/float(numTestVecs)))
+    print("the total error rate is: %f" % (errorCount / float(numTestVecs)))
     print(errorCount)
+
 
 def classifyPerson():
     '''简单的一个交互工具：
        输入特征值，内部通过分类器预测出类型
     '''
     resultList = ['not at all', 'in small doses', 'in large doses']
-    percentTats = float(input(\
-                                  "percentage of time spent playing video games?"))
+    percentTats = float(input( \
+        "percentage of time spent playing video games?"))
     ffMiles = float(input("frequent flier miles earned per year?"))
     iceCream = float(input("liters of ice cream consumed per year?"))
     datingDataMat, datingLabels = file2matrix('datingTestSet2.txt')
     normMat, ranges, minVals = autoNorm(datingDataMat)
     inArr = array([ffMiles, percentTats, iceCream, ])
     classifierResult = classify0((inArr - \
-                                  minVals)/ranges, normMat, datingLabels, 3)
+                                  minVals) / ranges, normMat, datingLabels, 3)
     print("You will probably like this person: %s" % resultList[classifierResult - 1])
+
+
+###################################手写数字0-9识别######################################################
+from os import listdir
+
+
+def img2vector(filename):
+    '''将图片的像素点转化为向量矩阵中'''
+    returnVect = zeros((1, 1024))
+    fr = open(filename)
+    for i in range(32):
+        lineStr = fr.readline()
+        for j in range(32):
+            returnVect[0, 32 * i + j] = int(lineStr[j])
+    return returnVect
+
+
+def handwritingClassTest():
+    hwLabels = []
+    trainingFileList = listdir('digits/trainingDigits')  # load the training set
+    m = len(trainingFileList)
+    trainingMat = zeros((m, 1024))
+    for i in range(m):
+        fileNameStr = trainingFileList[i]
+        fileStr = fileNameStr.split('.')[0]  # take off .txt
+        classNumStr = int(fileStr.split('_')[0])
+        hwLabels.append(classNumStr)
+        trainingMat[i, :] = img2vector('digits/trainingDigits/%s' % fileNameStr)
+    testFileList = listdir('digits/testDigits')  # iterate through the test set
+    errorCount = 0.0
+    mTest = len(testFileList)
+    for i in range(mTest):
+        fileNameStr = testFileList[i]
+        fileStr = fileNameStr.split('.')[0]  # take off .txt
+        classNumStr = int(fileStr.split('_')[0])
+        vectorUnderTest = img2vector('digits/testDigits/%s' % fileNameStr)
+        #分类器检测测试样本
+        classifierResult = classify0(vectorUnderTest, trainingMat, hwLabels, 3)
+        print("the classifier came back with: %d, the real answer is: %d" % (classifierResult, classNumStr))
+        if (classifierResult != classNumStr): errorCount += 1.0
+    print("\nthe total number of errors is: %d" % errorCount)
+    print("\nthe total error rate is: %f" % (errorCount / float(mTest)))
 
 
 if __name__ == "__main__":
     # run_autoNorm()
     # datingClassTest()
-    classifyPerson()
+    # classifyPerson()
+    handwritingClassTest()
