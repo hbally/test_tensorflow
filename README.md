@@ -1,6 +1,6 @@
 ## 入门机器学习
 
-![img-w150](app/resouce/ml_learn.png)
+![img{100}](app/resouce/ml_learn.png)
 
 - KNN算法
 
